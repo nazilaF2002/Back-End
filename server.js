@@ -1,4 +1,3 @@
-
 const express =require('express');
 const bodyParser =require('body-parser');
 const {Pool} =require('pg');
@@ -8,14 +7,10 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt=require('bcrypt');
 const {hash} = require('bcrypt');
-// import bcrypt, { hash } from 'bcrypt';
-// const nodemailer = require('nodemailer');
+const session = require('express-session');
+const JWT= require('jsonwebtoken');
 const PORT=5000;
 const saltRound=10;
-// const numberToHash = '123g'; // Replace with your number
-// bcrypt.hash(numberToHash, saltRound, function(err, hash) {
-//     console.log(hash);
-// });
 const pool = new Pool({
     user:'postgres',
     host:'localhost',
@@ -23,26 +18,18 @@ const pool = new Pool({
     password:'postgres',
     port:5432
 });
+
 app.use(cors());
 app.use(express.static("public"));
-// app.use('/uploads',express.static(path.join(__dirname, 'public')));
-// app.use('/uploads',express.static(path.join(__dirname, 'public/public')));
-// using multer for uploding files
-// const storage = multer.diskStorage({
-//     destination: (req, file, cb) => {
-//       const courseName = req.params.courseName; 
-//       const dir = `uploads/${courseName}`;
-  
-//       if (!fs.existsSync(dir)){
-//         fs.mkdirSync(dir, { recursive: true });
-//       }
-//       cb(null, dir);
-//     },
-//     filename: (req, file, cb) => {
-//       cb(null, Date.now() + path.extname(file.originalname));  
-//     }
-//   });
-//    const upload = multer({ storage: storage })
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(session({
+    secret: 'your-secret-key',
+    // resave: true,
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false } 
+}));
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, './public/uploads'); // Specify the upload directory
@@ -52,23 +39,11 @@ const storage = multer.diskStorage({
     },
 });
 const upload = multer({ storage });
-app.use(bodyParser.urlencoded({ extended: true }));
 
-// Email configuration
-// const transporter = nodemailer.createTransport({
-//     service: 'gmail', // Use your email service
-//     auth: {
-//         user: 'nazilafaizzadah37@gmail.com',
-//         pass: '12345678',
-//     },
-// });
-
-
+const JWTSecret='sklfh3fdh4h534h6bhk3h46hhh3k2h4b2hj6h2hk2';
 app.post('/uploads',upload.single('file'),(req,res)=>{
     // console.log('upload'+req.body);
-    console.log('second upload'+req.file.path);
-    
-    
+    console.log('second upload'+req.file.path); 
 })
 
 let Front_teacher='';
@@ -209,8 +184,8 @@ app.post('/lessons/:currentPath/new', upload.fields([{ name: 'video' }, { name: 
 
     const videoFile = req.files['video'] ? req.files['video'][0] : null;
     const pdfFile = req.files['pdf'] ? req.files['pdf'][0] : null;
-    const videoPath = videoFile ? videoFile.path.replace(/\\/g, '/') : null;
-    const pdfPath = pdfFile ? pdfFile.path.replace(/\\/g, '/') : null;
+    const videoPath = videoFile ? `/uploads/${videoFile.filename}` : null; // Use the filename
+    const pdfPath = pdfFile ? `/uploads/${pdfFile.filename}` : null; // Use the filename
 
     // insert new lesson to the database
     pool.query(`INSERT INTO lessons (title, description, video, pdf, course_id) VALUES ($1, $2, $3, $4, $5)`, [title, description, videoPath, pdfPath, id], (error, results) => {
@@ -340,270 +315,92 @@ app.get('/lessons/:courseType/profile/:id',(req,res)=>{
      res.status(200).send(result.rows[0]);
     })
 })
-// register new students
-// app.post('/register', upload.none(), async (req, res) => {
-//     const { firstName, lastName, gender, course, username, password } = req.body;
-//     try {
-//         const checkResult = await pool.query('SELECT * FROM student WHERE email = $1', [username]);
-//         if (checkResult.rows.length > 0) {
-//             return res.status(400).send('You are already registered, please sign in.');
-//         }
-//         bcrypt.hash(password, saltRound, async (err, hash) => {
-//             if (err) {
-//                 console.error(err);
-//                 return res.status(500).send('Internal server error');
-//             }
-//             const result = await pool.query(
-//                 'INSERT INTO student (fname, lname, gender, email, password) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-//                 [firstName, lastName, gender, username, hash]
-//             );
-//             const newStudentId = result.rows[0].id;
-//             // Enroll the student in selected courses
-//             const selectedCourses = Array.isArray(course) ? course : [course]; // Ensure it's an array
-//             console.log('this are courses',selectedCourses);  
-//             const classes = []; // Array to hold course data  
-//             for (let selectedCourse of selectedCourses) {
-//                 let courseId;
-//                 // Use if-else to determine course ID
-//                 if (selectedCourse === 'FrontEnd') {
-//                     courseId = 1;
-//                 } else if (selectedCourse === 'BackEnd') {
-//                     courseId = 2;
-//                 } else if (selectedCourse === 'uiux') {
-//                     courseId = 3;
-//                 } else if (selectedCourse === 'graphic') {
-//                     courseId = 4;
-//                 }
-//                 // Insert into enrollment table if a valid course ID is found
-//                 if (courseId) {
-//                    await pool.query('INSERT INTO enrollment (student_id, course_id) VALUES ($1, $2)', [newStudentId, courseId]);
-//                   let courseData=  await pool.query('SELECT * FROM courses WHERE id=$1',[courseId]);
-//                   classes.push(courseData.rows[0]); // Push the course data to the classes array
-//                 //   classes.push(courseData.rows[0]); // Push the course data to the classes array
-//                 }
-//             }
-//             return res.status(201).json({ success: true, message: 'Registration successful!', classes });
-//             // return res.status(201).json({ success: true, message: 'Registration successful!' });
-//         });
-//     } catch (err) {
-//         console.error(err);
-//         return res.status(500).send('Internal server error');
-//     }
-// });
-
-
-// register new students
-// let selectedCourses=[];
-// app.post('/register', upload.none(), async (req, res) => {
-//     const { firstName, lastName, gender, course, username, password } = req.body;
-//     try {
-//         const checkResult = await pool.query('SELECT * FROM student WHERE email = $1', [username]);
-//         if (checkResult.rows.length > 0) {
-//             return res.status(400).send('You are already registered, please sign in.');
-//         }
-//         bcrypt.hash(password, saltRound, async (err, hash) => {
-//             if (err) {
-//                 console.error(err);
-//                 return res.status(500).send('Internal server error');
-//             }
-//             const result = await pool.query(
-//                 'INSERT INTO student (fname, lname, gender, email, password) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-//                 [firstName, lastName, gender, username, hash]
-//             );
-//             const newStudentId = result.rows[0].id;
-//              selectedCourses = Array.isArray(course) ? course : [course];
-//             const classes = []; // Array to hold course data
-
-//             for (let selectedCourse of selectedCourses) {
-//                 let courseId;
-//                 if (selectedCourse === 'FrontEnd') {
-//                     courseId = 1;
-//                 } else if (selectedCourse === 'BackEnd') {
-//                     courseId = 2;
-//                 } else if (selectedCourse === 'uiux') {
-//                     courseId = 3;
-//                 } else if (selectedCourse === 'graphic') {
-//                     courseId = 4;
-//                 }
-
-//                 if (courseId) {
-//                     await pool.query('INSERT INTO enrollment (student_id, course_id) VALUES ($1, $2)', [newStudentId, courseId]);
-//                     const courseData = await pool.query('SELECT * FROM courses WHERE id=$1', [courseId]);
-//                     classes.push(courseData.rows[0]); // Push the first element of the array
-//                 }
-//             }
-
-//             return res.status(201).json({ success: true, message: 'Registration successful!', classes });
-//         });
-//     } catch (err) {
-//         console.error(err);
-//         return res.status(500).send('Internal server error');
-//     }
-// });
-
-let selectedCourses = [];
-
+// register new student
 app.post('/register', upload.none(), async (req, res) => {
-    console.log(req.body); // Log incoming data
     const { firstName, lastName, gender, course, username, password } = req.body;
+    console.log('Registration Data:', req.body); // Log incoming data
     try {
         const checkResult = await pool.query('SELECT * FROM student WHERE email = $1', [username]);
         if (checkResult.rows.length > 0) {
             return res.status(400).send('You are already registered, please sign in.');
         }
-        // Hash the password
-        bcrypt.hash(password, saltRound, async (err, hash) => {
-            if (err) {
-                console.error(err);
-                return res.status(500).send('Internal server error');
-            }
-            const result = await pool.query(
-                'INSERT INTO student (fname, lname, gender, email, password) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-                [firstName, lastName, gender, username, hash]
-            );
-            const newStudentId = result.rows[0].id;
-              selectedCourses = Array.isArray(course) ? course : [course]; // Ensure this is set correctly
-            console.log('Selected courses:', selectedCourses); // Log to check
+        const hash = await bcrypt.hash(password, saltRound);
+        const result = await pool.query(
+            'INSERT INTO student (fname, lname, gender, email, password) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+            [firstName, lastName, gender, username, hash]
+        );
+        const newStudentId = result.rows[0].id;
+        // Store selected courses in the session
+        req.session.selectedCourses = Array.isArray(course) ? course : [course];
+        console.log('Stored Courses in Session:', req.session.selectedCourses); // Log to verify
+        console.log('Session after registration:', req.session);
+        for (const selectedCourse of req.session.selectedCourses) {
+            let courseId;
+            if (selectedCourse === 'FrontEnd') courseId = 1;
+            else if (selectedCourse === 'BackEnd') courseId = 2;
+            else if (selectedCourse === 'uiux') courseId = 3;
+            else if (selectedCourse === 'graphic') courseId = 4;
 
-            for (let selectedCourse of selectedCourses) {
-                let courseId;
-                if (selectedCourse === 'FrontEnd') {
-                    courseId = 1;
-                } else if (selectedCourse === 'BackEnd') {
-                    courseId = 2;
-                } else if (selectedCourse === 'uiux') {
-                    courseId = 3;
-                } else if (selectedCourse === 'graphic') {
-                    courseId = 4;
-                }
-                if (courseId) {
-                    await pool.query('INSERT INTO enrollment (student_id, course_id) VALUES ($1, $2)', [newStudentId, courseId]);  
-                }
+            if (courseId) {
+                await pool.query('INSERT INTO enrollment (student_id, course_id) VALUES ($1, $2)', [newStudentId, courseId]);
             }
-           console.log('inside register',selectedCourses);
-           
-            return res.status(201).json({ success: true, message: 'Registration successful!' });
-        });
+        }
+        // Generate and sign the token
+        const token = await JWT.sign({ username: username }, JWTSecret, { expiresIn: '1000h' });
+        // Save the token in the session
+        req.session.token = token;
+        console.log('Generated Token:', token);
+        console.log('this is a test');
+        return res.status(201).json({ success: true, message: 'Registration successful!', token });
     } catch (err) {
         console.error(err);
         return res.status(500).send('Internal server error');
     }
 });
-// let selectedCourses = [];
-
-// app.post('/register', upload.none(), async (req, res) => {
-//     console.log(req.body); // Log incoming data
-//     const { firstName, lastName, gender, course, username, password } = req.body;
-//     try {
-//         const checkResult = await pool.query('SELECT * FROM student WHERE email = $1', [username]);
-//         if (checkResult.rows.length > 0) {
-//             return res.status(400).send('You are already registered, please sign in.');
-//         }
-//         // Hash the password
-//         bcrypt.hash(password, saltRound, async (err, hash) => {
-//             if (err) {
-//                 console.error(err);
-//                 return res.status(500).send('Internal server error');
-//             }
-//             const result = await pool.query(
-//                 'INSERT INTO student (fname, lname, gender, email, password) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-//                 [firstName, lastName, gender, username, hash]
-//             );
-//             const newStudentId = result.rows[0].id;
-//             selectedCourses = Array.isArray(course) ? course : [course]; // Ensure this is set correctly
-//             console.log('Selected courses:', selectedCourses); // Log to check
-
-//             const classes = []; // Array to hold course data
-//             for (let selectedCourse of selectedCourses) {
-//                 let courseId;
-//                 if (selectedCourse === 'FrontEnd') {
-//                     courseId = 1;
-//                 } else if (selectedCourse === 'BackEnd') {
-//                     courseId = 2;
-//                 } else if (selectedCourse === 'uiux') {
-//                     courseId = 3;
-//                 } else if (selectedCourse === 'graphic') {
-//                     courseId = 4;
-//                 }
-
-//                 if (courseId) {
-//                     await pool.query('INSERT INTO enrollment (student_id, course_id) VALUES ($1, $2)', [newStudentId, courseId]);
-//                     const courseData = await pool.query('SELECT * FROM courses WHERE id=$1', [courseId]);
-//                     classes.push(courseData.rows[0]);
-//                 }
-//             }
-//            console.log('insits register',selectedCourses);
-           
-//             return res.status(201).json({ success: true, message: 'Registration successful!', classes });
-//         });
-//     } catch (err) {
-//         console.error(err);
-//         return res.status(500).send('Internal server error');
-//     }
-// });
-// courses
-// console.log('out of the course',selectedCourses);
-
+// get courses 
 app.get('/courses', async (req, res) => {
     try {
-        console.log('this is selsected courses ',selectedCourses);
-        
-        for (let i = 0; i < selectedCourses.length; i++) { // Fixed the loop condition
-            const courseName = selectedCourses[i]; // Get the course name from the array
-             await pool.query('SELECT * FROM courses WHERE course = $1', [courseName],(err,result)=>{
-                if(err){
-                    console.log('an error in the courses',err);
-                }
-                res.send(result.rows)
-                console.log('this is course',result.rows);
-                
-            });
+        const courses = [];
+        const selectedCourses = req.session.selectedCourses || []; // Use session variable
+        console.log('Selected courses:', selectedCourses); // Log selected courses
+         console.log('inside of courses', req.session.selectedCourse);
+        // console.log('Session:', req.session);
+        for (const courseName of selectedCourses) {
+            const result = await pool.query('SELECT * FROM courses WHERE course = $1', [courseName]);
+            courses.push(...result.rows);
         }
+        res.send(courses);
+        // res.json(courses);
+    } catch (error) {
+        console.log('courses err', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    catch(error){
-        console.log('courses err',error);
-        
-    }
-})
+});
 // login
 app.post('/login', upload.none(), async (req, res) => {
     const { username, password } = req.body;
+    // console.log('Session at Login:', req.session);
     try {
-        // Check students table first
         let result = await pool.query("SELECT * FROM student WHERE email = $1", [username]);
         
         if (result.rows.length > 0) {
             const user = result.rows[0];
-            const dbPassword = user.password;
-
-            bcrypt.compare(password, dbPassword, (err, match) => {
-                if (err) {
-                    return res.status(500).json({ error: 'Internal server error' });
-                }
-                if (match) {
-                    return res.json({ success: true, userType: 'student' });
-                } else {
-                    return res.status(401).json({ error: 'Password is not correct!' });
-                }
-            });
+            const match = await bcrypt.compare(password, user.password);
+            if (match) {
+                return res.json({ success: true, userType: 'student' });
+            } else {
+                return res.status(401).json({ error: 'Password is not correct!' });
+            }
         } else {
-            // Check teachers table
             result = await pool.query("SELECT * FROM teachers WHERE email = $1", [username]);
             if (result.rows.length > 0) {
                 const user = result.rows[0];
-                const dbPassword = user.password;
-
-                bcrypt.compare(password, dbPassword, (err, match) => {
-                    if (err) {
-                        return res.status(500).json({ error: 'Internal server error' });
-                    }
-                    if (match) {
-                        // Successful teacher login, send ID
-                        return res.json({ success: true, userType: 'teacher', teacherId: user.id });
-                    } else {
-                        return res.status(401).json({ error: 'Password is not correct!' });
-                    }
-                });
+                const match = await bcrypt.compare(password, user.password);
+                if (match) {
+                    return res.json({ success: true, userType: 'teacher', teacherId: user.id });
+                } else {
+                    return res.status(401).json({ error: 'Password is not correct!' });
+                }
             } else {
                 return res.status(404).json({ error: "User not found, please sign up." });
             }
