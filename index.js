@@ -20,7 +20,7 @@ const saltRound=10;
 // import database
 const pool = new Pool({
     user:process.env.USER,
-    host:process.env.HOST,
+    host:process.env.HOSTNAME,
     database:process.env.DATABASE,
     password:process.env.PASSWORD,
     port:5432
