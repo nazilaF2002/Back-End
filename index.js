@@ -15,16 +15,31 @@ env.config();
 
 // makeing an express aplication
 const app = express();
-const PORT=5000;
+const PORT= 5000;
 const saltRound=10;
-// import database
+
 const pool = new Pool({
     user:process.env.USER,
-    host:process.env.HOSTNAME,
+    host:process.env.HOST,
     database:process.env.DATABASE,
     password:process.env.PASSWORD,
-    port:5432
+    port:5432,
+    ssl: {
+        rejectUnauthorized: false // Set to false for self-signed certificates; adjust as needed
+    }
 });
+// conect to database
+const connectDB=async () =>{
+    try{
+     await pool.connect();
+     console.log('postgreSql connected');
+     
+    }
+    catch(err){
+        console.error('connection err',err)
+    }
+}
+connectDB();
 // useing needed middlewares
 app.use(cors());
 app.use(express.static("public"));
