@@ -107,7 +107,7 @@ pool.query('SELECT * FROM teachers WHERE course_id=$1',[1],(error,result)=>{
 // backend teacher
 pool.query('SELECT * FROM teachers WHERE course_id=$1',[2],(error,result)=>{
     if(error){
-        console.log('an error exict in Front-teacher',error);
+        console.log('an error exict in backend',error);
     }
     else{
         Back_End_teacher=result.rows[0];
@@ -116,7 +116,7 @@ pool.query('SELECT * FROM teachers WHERE course_id=$1',[2],(error,result)=>{
 // uiux teacher
 pool.query('SELECT * FROM teachers WHERE course_id=$1',[3],(error,result)=>{
     if(error){
-        console.log('an error exict in Front-teacher',error);
+        console.log('an error exict in uiux',error);
     }
     else{
        UiUx_teacher=result.rows[0];
@@ -125,7 +125,7 @@ pool.query('SELECT * FROM teachers WHERE course_id=$1',[3],(error,result)=>{
 // graphic teacher
 pool.query('SELECT * FROM teachers WHERE course_id=$1',[4],(error,result)=>{
     if(error){
-        console.log('an error exict in Front-teacher',error);
+        console.log('an error exict in graphic',error);
     }
     else{
        Graphic_teacher=result.rows[0];
