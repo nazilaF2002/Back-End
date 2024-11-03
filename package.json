@@ -9,6 +9,9 @@
      "start":"node index.js",
      "build":"npm i"
   },
+  "engines": {
+  "node": "21.x" 
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
