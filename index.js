@@ -449,7 +449,7 @@ app.post('/register', upload.single('profileImage'), async (req, res) => {
         }
 
         // Generate and sign the token
-        const token = await JWT.sign({ username: username, newStudentId: newStudentId }, JWTSecret, { expiresIn: '3h' });
+        const token = await JWT.sign({ username: username, newStudentId: newStudentId }, JWTSecret, { expiresIn: '5h' });
         return res.status(201).json({ success: true, message: 'Registration successful!', token });
     } catch (err) {
         console.error(err);
